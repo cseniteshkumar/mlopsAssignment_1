@@ -433,7 +433,7 @@ def run(args=None):
             transformed = np.array(transformed.todense()) if hasattr(transformed, "todense") else np.asarray(transformed)
             # get feature names
             try:
-                from src.eda import _get_feature_names_from_column_transformer
+                from dataEDA import _get_feature_names_from_column_transformer
                 feat_names = _get_feature_names_from_column_transformer(pre)
             except Exception:
                 feat_names = [f"f{i}" for i in range(transformed.shape[1])]

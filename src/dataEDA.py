@@ -3,26 +3,65 @@
 Generates histograms for numeric features, a correlation heatmap, and class balance plot.
 Saves PNGs to the output directory.
 
-Usage:
-    python src/eda.py --dataset DataSet --target num --out outputs/eda
 """
 
+import sys
+import os
 
+import pathlib
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-
-
-
-
-
-
-import argparse
-from pathlib import Path
 import pandas as pd
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
-import seaborn as sns
+import numpy as np
+
+from src.dataRead import load_dataset
+from src.dataClean import clean_data
+
+
+def run_full_eda(df, output_dir='eda_outputs'):
+    """Generates all visualizations: Histograms, Heatmaps, Violins, and PCA."""
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
+    sns.set_theme(style="whitegrid")
+    numeric_cols = ['age', 'trestbps', 'chol', 'thalach', 'oldpeak']
+
+    # A. Statistical Distributions (Histograms)
+    df[numeric_cols].hist(bins=15, figsize=(15, 10), color='teal', edgecolor='black')
+    plt.suptitle('Feature Distributions')
+    plt.savefig(f'{output_dir}/1_distributions.png')
+    plt.close()
+
+    # B. Class Density Analysis (Violin Plots)
+    fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+    axes = axes.flatten()
+    for i, col in enumerate(numeric_cols):
+        sns.violinplot(x='target', y=col, data=df, ax=axes[i], split=True, palette="RdBu")
+    fig.delaxes(axes[5])
+    plt.savefig(f'{output_dir}/2_violin_plots.png')
+    plt.close()
+
+    # C. Feature Relationships (Correlation Heatmap)
+    plt.figure(figsize=(12, 8))
+    sns.heatmap(df.corr(), annot=True, cmap='coolwarm', fmt=".2f")
+    plt.title('Correlation Heatmap')
+    plt.savefig(f'{output_dir}/3_heatmap.png')
+    plt.close()
+
+    # D. Multi-Dimensional Separation (PCA)
+    features = df.drop('target', axis=1)
+    scaled = StandardScaler().fit_transform(features)
+    pca = PCA(n_components=2)
+    pca_data = pca.fit_transform(scaled)
+    
+    plt.figure(figsize=(10, 6))
+    sns.scatterplot(x=pca_data[:,0], y=pca_data[:,1], hue=df['target'], palette='bright')
+    plt.title('PCA Projection (Cluster Analysis)')
+    plt.savefig(f'{output_dir}/4_pca_clusters.png')
+    plt.close()
+
+    print(f"\n📊 EDA complete. Visuals saved to '{output_dir}/'")
 
 
 
