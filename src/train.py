@@ -30,7 +30,7 @@ def parse_args(argv=None):
     p.add_argument("--output", type=str, default="models/model.joblib", help="Path to save trained model")
     p.add_argument("--test-size", type=float, default=0.2, help="Test set fraction")
     p.add_argument("--random-state", type=int, default=42)
-    p.add_argument("--n-estimators", type=int, default=100, help="Number of trees for RandomForest")
+    p.add_argument("--n-estimators", type=int, default=200, help="Number of trees for RandomForest")
     p.add_argument("--max-depth", type=int, default=None, help="Max depth for RandomForest (None for unlimited)")
     p.add_argument("--search", type=str, default="none", choices=["none", "grid", "random"], help="Hyperparameter search type: none, grid, or random")
     p.add_argument("--param-grid-file", type=str, default=None, help="Optional JSON file containing param grid for search")

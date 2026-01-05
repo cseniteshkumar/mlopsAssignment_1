@@ -7,6 +7,8 @@ from typing import Optional, Tuple, Dict, Any
 from pathlib import Path
 import json
 import shutil
+import pandas as pd
+import numpy as np
 
 from src.data import load_dataset
 from src.model import train_and_evaluate, save_model, load_model
@@ -18,19 +20,78 @@ def read_dataset(dataset_dir: str, target_col: Optional[str] = None):
 
 
 def clean_data(X, y):
-    """Lightweight cleaning using existing DataFrame ops (drop exact duplicates)."""
+    """Comprehensive cleaning inspired by the provided notebook.
+
+    - normalize column names (strip, lower, replace spaces)
+    - replace '?' with NaN
+    - attempt to coerce columns to numeric when majority of values parse
+    - impute numeric columns with median and categorical with mode
+    - drop exact duplicates and align target
+    - binarize target if it appears to be the UCI 'num' multi-class target (>0 -> 1)
+    """
     df = X.copy()
-    df["__target__"] = y.values
+    # normalize column names
+    df.columns = [str(c).strip().lower().replace(" ", "_") for c in df.columns]
+
+    # work on copy of target
+    y_clean = y.copy()
+    try:
+        # binarize if name suggests UCI 'num' target or values >1 exist
+        if getattr(y_clean, "name", None) and str(y_clean.name).strip().lower() == "num":
+            y_clean = (y_clean > 0).astype(int)
+        else:
+            if pd.api.types.is_numeric_dtype(y_clean):
+                if y_clean.max() is not None and float(y_clean.max()) > 1.0:
+                    y_clean = (y_clean > 0).astype(int)
+    except Exception:
+        # keep original if anything goes wrong
+        y_clean = y.copy()
+
+    # replace common missing marker
+    df = df.replace("?", np.nan)
+
+    # attempt to coerce columns that are mostly numeric
+    for col in df.columns:
+        coerced = pd.to_numeric(df[col], errors="coerce")
+        # if at least 60% of values parsed as numeric we keep the conversion
+        non_null = coerced.notna().sum()
+        if non_null >= max(1, int(0.6 * len(df))):
+            df[col] = coerced
+
+    # impute: numeric -> median, categorical -> mode
+    for col in df.columns:
+        try:
+            if pd.api.types.is_numeric_dtype(df[col]):
+                median = df[col].median()
+                df[col] = df[col].fillna(median)
+            else:
+                if df[col].isnull().any():
+                    mode = None
+                    try:
+                        mode = df[col].mode().iloc[0]
+                    except Exception:
+                        mode = "missing"
+                    df[col] = df[col].fillna(mode)
+        except Exception:
+            # last-resort fill
+            df[col] = df[col].fillna("missing")
+
+    # drop duplicates and align target by index
     before = len(df)
     df = df.drop_duplicates()
     after = len(df)
-    if "__target__" in df.columns:
-        y_clean = df["__target__"].copy()
-        X_clean = df.drop(columns=["__target__"])
-    else:
-        X_clean = df
-        y_clean = y
-    return X_clean, y_clean, {"dropped_duplicates": int(before - after)}
+    dropped = int(before - after)
+
+    # align y to df indices assuming original indexes were aligned
+    try:
+        y_aligned = y_clean.loc[df.index]
+        # if lengths differ still, reset index alignment to positional
+        if len(y_aligned) != len(df):
+            y_aligned = y_clean.reset_index(drop=True).iloc[: len(df)]
+    except Exception:
+        y_aligned = y_clean.reset_index(drop=True).iloc[: len(df)]
+
+    return df.reset_index(drop=True), y_aligned.reset_index(drop=True), {"dropped_duplicates": dropped}
 
 
 def process_data(X):

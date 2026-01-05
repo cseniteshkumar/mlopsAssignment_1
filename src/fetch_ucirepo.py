@@ -18,17 +18,52 @@ def parse_args(argv=None):
 def run(args=None):
     if args is None:
         args = parse_args()
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
+    print(f"Fetching dataset id={args.id} from UCI ML Repository...")
+    # Special-case for the processed Cleveland heart-disease dataset (id=45)
+    # Read directly from UCI using explicit column names and '?' as NA marker.
+    if args.id == 45:
+        import pandas as pd
+
+        # URL for the processed Cleveland dataset
+        url = (
+            "https://archive.ics.uci.edu/ml/machine-learning-databases/heart-disease/processed.cleveland.data"
+        )
+
+        # Define column names (as the raw file doesn't have a header)
+        columns = [
+            "age",
+            "sex",
+            "cp",
+            "trestbps",
+            "chol",
+            "fbs",
+            "restecg",
+            "thalach",
+            "exang",
+            "oldpeak",
+            "slope",
+            "ca",
+            "thal",
+            "num",
+        ]
+
+        # Read the data (dataset uses '?' for missing values)
+        df = pd.read_csv(url, names=columns, na_values="?")
+
+        out_path = out_dir / f"{args.id}_processed_cleveland.csv"
+        df.to_csv(out_path, index=False)
+        print(f"Saved file: {out_path}")
+        return
+
+    # fetch_ucirepo accepts keyword 'id' or 'name' — pass id explicitly
     try:
         from ucimlrepo import fetch_ucirepo
     except Exception as e:
         raise RuntimeError("The package 'ucimlrepo' is required. Install it or update requirements.") from e
 
-    out_dir = Path(args.out)
-    out_dir.mkdir(parents=True, exist_ok=True)
-
-    print(f"Fetching dataset id={args.id} from UCI ML Repository...")
-    # fetch_ucirepo accepts keyword 'id' or 'name' — pass id explicitly
     data = fetch_ucirepo(id=args.id)
 
     # recursively search for pandas DataFrames inside the returned object

@@ -1,20 +1,20 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: assignment1-deployment
+  name: MLOpsAssignment1-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: assignment1
+      app: MLOpsAssignment1
   template:
     metadata:
       labels:
-        app: assignment1
+        app: MLOpsAssignment1
     spec:
       containers:
-      - name: assignment1
-        image: assignment1-api:latest
+      - name: MLOpsAssignment1
+        image: MLOpsAssignment1-api:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 8080

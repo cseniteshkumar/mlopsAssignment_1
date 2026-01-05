@@ -27,7 +27,8 @@ def build_pipeline(numeric_cols, categorical_cols, classifier=None) -> Pipeline:
     categorical_cols: list of column names with object/category dtype
     """
     if classifier is None:
-        classifier = RandomForestClassifier(n_estimators=100, random_state=42)
+        # match notebook's stronger default forest
+        classifier = RandomForestClassifier(n_estimators=200, random_state=42, class_weight="balanced_subsample")
 
     transformers = []
     if numeric_cols:
@@ -37,9 +38,16 @@ def build_pipeline(numeric_cols, categorical_cols, classifier=None) -> Pipeline:
         ])
         transformers.append(("num", num_pipeline, numeric_cols))
     if categorical_cols:
+        # Create OneHotEncoder with dense output, but keep compatibility with older sklearn
+        try:
+            ohe = OneHotEncoder(handle_unknown="ignore", sparse_output=False)
+        except TypeError:
+            # older sklearn versions use `sparse` parameter
+            ohe = OneHotEncoder(handle_unknown="ignore", sparse=False)
+
         cat_pipeline = Pipeline([
             ("imputer", SimpleImputer(strategy="most_frequent")),
-            ("ohe", OneHotEncoder(handle_unknown="ignore")),
+            ("ohe", ohe),
         ])
         # don't pass 'sparse' or 'sparse_output' to support multiple sklearn versions
         transformers.append(("cat", cat_pipeline, categorical_cols))
