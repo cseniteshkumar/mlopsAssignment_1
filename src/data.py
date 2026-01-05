@@ -8,6 +8,8 @@ import pandas as pd
 def load_dataset():
 
     data = pd.read_csv("../DataSet/heart_disease_cleveland.csv")
+    print(f"Data shape: {data.shape}")
+    print(f"First 5 rows:\n{data.head()}")
 
     X = data.drop(columns=["num"])
     y = data["num"]
@@ -16,6 +18,7 @@ def load_dataset():
 if __name__ == "__main__":
     try:
         X, y = load_dataset()
-        print("Loaded", X.shape, y.shape)
+        print("\n\n\nLoaded", X.shape, y.shape)
+    
     except Exception as e:
-        print("Data load error:", e)
+        print("\n\n\nData load error:", e)
