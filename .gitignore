@@ -111,7 +111,7 @@ roc_curve_multiclass.png
 
 # ------------------ Data / dataset folders (large) ------------------
 # If DataSet is intended to be in the repo, remove this line; otherwise keep to avoid large history
-DataSet/
+# DataSet/
 
 # ------------------ Misc / editor swap files ------------------
 *.bak
