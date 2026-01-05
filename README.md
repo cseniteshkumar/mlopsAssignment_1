@@ -118,6 +118,35 @@ python -m pytest -q
 - The repo includes a `Dockerfile` and a GitHub Actions workflow to run the tests. If you want, I can also package the project into a simple CLI distribution or add nested CV for model selection.
 
 If you'd like the README to include screenshots of EDA artifacts or a short tutorial notebook, tell me and I will generate them.
+
+## Run pipeline directly (no Airflow)
+
+If you prefer not to run the project under Airflow you can execute the end-to-end
+pipeline directly from the repository. Two lightweight options are provided:
+
+- Runner script (recommended): `run_pipeline.py` ensures the repository root is on
+  PYTHONPATH and calls the pipeline entrypoint. Example:
+
+```bash
+python run_pipeline.py --dataset DataSet --output models/model.joblib
+```
+
+- Direct module call: you can run the pipeline entrypoint directly from `src`:
+
+```bash
+python src/pipeline.py --dataset DataSet --output models/model.joblib
+```
+
+Notes:
+- Make sure dependencies are installed in a virtualenv (see Quick start). The
+  pipeline accepts the same `--dataset`, `--target`, and `--output` flags as
+  the Airflow tasks did.
+- MLflow integration is optional — set `ENABLE_MLFLOW=0` to disable logging or
+  set `MLFLOW_TRACKING_URI` / `MLFLOW_EXPERIMENT` to configure a remote server or
+  experiment name.
+
+Running the runner will produce the trained model at the `--output` path and
+write pipeline metadata/metrics next to the model (for example `models/pipeline_metrics.json`).
 # MLOps Assignment — scikit-learn pipeline
 
 This project contains a small scikit-learn based training pipeline that reads CSV files from the `DataSet/` folder, trains a classifier, evaluates it, and saves a trained model to `models/`.
