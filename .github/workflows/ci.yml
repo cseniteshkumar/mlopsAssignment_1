@@ -1,0 +1,195 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install lint deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+
+      - name: Run flake8
+        run: |
+          set -o pipefail
+          flake8 src || true
+        continue-on-error: true
+        # capture output to file for artifact
+      - name: Save flake8 output
+        run: |
+          flake8 src > flake8.txt || true
+
+      - name: Upload flake8 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: flake8-report
+          path: flake8.txt
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov scikit-learn pandas numpy matplotlib seaborn joblib
+
+      - name: Run pytest
+        run: |
+          pytest -q --junitxml=pytest-results.xml --maxfail=1
+        continue-on-error: false
+
+      - name: Upload pytest results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: pytest-results.xml
+
+      - name: Upload pytest log
+        name: CI
+
+        on:
+          push:
+            branches: [ main, master ]
+          pull_request:
+            branches: [ main, master ]
+
+        jobs:
+          lint:
+            runs-on: ubuntu-latest
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+
+              - name: Set up Python
+                uses: actions/setup-python@v4
+                with:
+                  python-version: '3.10'
+
+              - name: Install lint deps
+                run: |
+                  python -m pip install --upgrade pip
+                  pip install flake8
+
+              - name: Run flake8 and save output
+                run: |
+                  set -o pipefail
+                  flake8 src || true
+                  flake8 src > flake8.txt || true
+
+              - name: Upload flake8 artifact
+                uses: actions/upload-artifact@v4
+                with:
+                  name: flake8-report
+                  path: flake8.txt
+
+          test:
+            runs-on: ubuntu-latest
+            needs: lint
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+
+              - name: Set up Python
+                uses: actions/setup-python@v4
+                with:
+                  python-version: '3.10'
+
+              - name: Install test deps
+                run: |
+                  python -m pip install --upgrade pip
+                  if [ -f requirements.txt ]; then
+                    pip install -r requirements.txt
+                  else
+                    pip install pytest pytest-cov scikit-learn pandas numpy matplotlib seaborn joblib
+                  fi
+
+              - name: Run pytest
+                run: |
+                  pytest -q --junitxml=pytest-results.xml --maxfail=1
+
+              - name: Upload pytest results
+                uses: actions/upload-artifact@v4
+                with:
+                  name: pytest-results
+                  path: pytest-results.xml
+
+          train:
+            runs-on: ubuntu-latest
+            needs: test
+            steps:
+              - name: Checkout
+                uses: actions/checkout@v4
+
+              - name: Set up Python
+                uses: actions/setup-python@v4
+                with:
+                  python-version: '3.10'
+
+              - name: Install train deps
+                run: |
+                  python -m pip install --upgrade pip
+                  if [ -f requirements.txt ]; then
+                    pip install -r requirements.txt
+                  else
+                    pip install scikit-learn pandas numpy joblib matplotlib seaborn
+                  fi
+
+              - name: Create small dataset for CI
+                run: |
+                  python - <<'PY'
+                  import pandas as pd
+                  from pathlib import Path
+                  p = Path('ci_DataSet')
+                  p.mkdir(exist_ok=True)
+                  df = pd.DataFrame({'feat1': [0,1,0,1,0,1,0,1], 'feat2': [1,2,1,2,1,2,1,2], 'target': [0,0,0,0,1,1,1,1]})
+                  df.to_csv(p / 'data.csv', index=False)
+                  print('wrote', (p / 'data.csv').exists())
+                  PY
+
+              - name: Train model (quick)
+                run: |
+                  python src/train.py --dataset ci_DataSet --target target --output models/ci_model.joblib --classifier rf --n-estimators 10 --search none
+
+              - name: List outputs
+                run: ls -la models || true
+
+              - name: Upload model artifacts
+                uses: actions/upload-artifact@v4
+                with:
+                  name: model-artifacts
+                  path: |
+                    models/**/*
+                    models
+
+              - name: Upload training logs and metrics
+                uses: actions/upload-artifact@v4
+                with:
+                  name: training-logs
+                  path: |
+                    models/metrics.json
+                    models/model_metadata.json
+                    models/cv_results.csv
+                    models/best_params.json

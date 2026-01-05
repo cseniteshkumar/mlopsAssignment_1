@@ -1,0 +1,67 @@
+numpy
+scipy
+pandas
+scikit-learn
+statsmodels
+
+# Visualization
+matplotlib
+seaborn
+plotly
+
+# Notebooks & interactive
+jupyterlab
+notebook
+ipykernel
+ipywidgets
+tqdm
+
+# Deep learning & NLP
+torch
+torchvision
+torchaudio
+tensorflow
+keras
+transformers
+datasets
+sentencepiece
+tokenizers
+
+# Gradient boosting & tree models
+xgboost
+lightgbm
+catboost
+
+# Big data / distributed
+dask[complete]
+distributed
+pyarrow
+fastparquet
+s3fs
+boto3
+
+# Databases & IO
+sqlalchemy
+psycopg2-binary
+
+# Model ops, tracking & monitoring
+mlflow
+wandb
+tensorboard
+
+# Explainability & model analysis
+shap
+lime
+eli5
+
+# Utilities & helpers
+joblib
+imbalanced-learn
+optuna
+scikit-optimize
+opencv-python
+Pillow
+rich
+
+# Test / dev tools (optional)
+pytest

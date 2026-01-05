@@ -1,0 +1,37 @@
+FROM gcr.io/k8s-minikube/kicbase:v0.0.48
+
+# Use the minikube base image (already present in this environment) and install
+# a minimal Python runtime so we avoid pulling docker.io/python which may be
+# blocked by credential helpers. This step uses apt to install python3 and pip.
+USER root
+
+FROM python:3.10-slim
+
+# Small runtime image using official python base
+WORKDIR /app
+
+# Install runtime dependencies
+COPY requirements-prod.txt ./
+RUN pip install --no-cache-dir -r requirements-prod.txt
+
+# Copy only the runtime files (API and saved model)
+COPY src/ ./src/
+COPY models/ ./models/
+
+EXPOSE 8080
+
+# Ensure any ENTRYPOINT from the base image is cleared so we run uvicorn directly
+CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8080"]
+WORKDIR /app
+COPY requirements-prod.txt ./
+RUN pip install --no-cache-dir -r requirements-prod.txt
+
+# Copy only the runtime files (API and saved model)
+COPY src/ ./src/
+COPY models/ ./models/
+
+EXPOSE 8080
+
+# Ensure any ENTRYPOINT from the base image is cleared so we run uvicorn directly
+ENTRYPOINT []
+CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8080"]
