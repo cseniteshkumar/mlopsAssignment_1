@@ -65,3 +65,6 @@ rich
 
 # Test / dev tools (optional)
 pytest
+
+
+python-multipart

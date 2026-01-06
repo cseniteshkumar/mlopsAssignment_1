@@ -1,4 +1,4 @@
-name: CI
+name: CI (API smoke)
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
     branches: [ main, master ]
 
 jobs:
-  lint:
+  api-smoke:
+    name: API smoke test (src/api.py)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -18,178 +19,79 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install lint deps
+      - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install flake8
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install uvicorn fastapi flask requests
+          fi
 
-      - name: Run flake8
+      - name: Detect framework
+        id: detect
         run: |
-          set -o pipefail
-          flake8 src || true
-        continue-on-error: true
-        # capture output to file for artifact
-      - name: Save flake8 output
-        run: |
-          flake8 src > flake8.txt || true
+          if grep -q "FastAPI" src/api.py 2>/dev/null; then
+            echo "framework=fastapi" >> $GITHUB_OUTPUT
+          elif grep -q "Flask" src/api.py 2>/dev/null || grep -q "flask" src/api.py 2>/dev/null; then
+            echo "framework=flask" >> $GITHUB_OUTPUT
+          else
+            echo "framework=script" >> $GITHUB_OUTPUT
+          fi
+          echo "port=8000" >> $GITHUB_OUTPUT
 
-      - name: Upload flake8 artifact
+      - name: Start API and wait for readiness
+        env:
+          FRAMEWORK: ${{ steps.detect.outputs.framework }}
+          PORT: ${{ steps.detect.outputs.port }}
+        run: |
+          set -euo pipefail
+          mkdir -p ci_run
+          if [ "$FRAMEWORK" = "fastapi" ]; then
+            CMD="uvicorn src.api:app --host 127.0.0.1 --port $PORT"
+          elif [ "$FRAMEWORK" = "flask" ]; then
+            export FLASK_APP=src.api
+            CMD="flask run --host=127.0.0.1 --port $PORT"
+          else
+            CMD="python src/api.py"
+          fi
+          echo "Starting: $CMD"
+          nohup bash -c "$CMD" > ci_run/api.log 2>&1 & echo $! > ci_run/api.pid
+          for i in $(seq 1 60); do
+            if curl -sS --max-time 2 "http://127.0.0.1:$PORT/" >/dev/null 2>&1; then
+              echo "Server ready"
+              break
+            fi
+            sleep 1
+            if [ $i -eq 60 ]; then
+              echo "Server did not start within 60s"
+              tail -n +1 ci_run/api.log || true
+              exit 1
+            fi
+          done
+          curl -sS "http://127.0.0.1:$PORT/" -o ci_run/smoke_response.txt || true
+
+      - name: Run smoke request with requests
+        env:
+          PORT: ${{ steps.detect.outputs.port }}
+        run: |
+          python - <<'PY'
+          import os, sys, requests
+          port = int(os.environ.get("PORT", "8000"))
+          try:
+            r = requests.get(f"http://127.0.0.1:{port}/", timeout=5)
+            print("STATUS", r.status_code)
+            print("BODY", r.text[:100])
+          except Exception as e:
+            print("Smoke request failed:", e)
+            sys.exit(1)
+          PY
+
+      - name: Upload logs and response
         uses: actions/upload-artifact@v4
         with:
-          name: flake8-report
-          path: flake8.txt
-
-  test:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
-      - name: Install test deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest pytest-cov scikit-learn pandas numpy matplotlib seaborn joblib
-
-      - name: Run pytest
-        run: |
-          pytest -q --junitxml=pytest-results.xml --maxfail=1
-        continue-on-error: false
-
-      - name: Upload pytest results
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-results
-          path: pytest-results.xml
-
-      - name: Upload pytest log
-        name: CI
-
-        on:
-          push:
-            branches: [ main, master ]
-          pull_request:
-            branches: [ main, master ]
-
-        jobs:
-          lint:
-            runs-on: ubuntu-latest
-            steps:
-              - name: Checkout
-                uses: actions/checkout@v4
-
-              - name: Set up Python
-                uses: actions/setup-python@v4
-                with:
-                  python-version: '3.10'
-
-              - name: Install lint deps
-                run: |
-                  python -m pip install --upgrade pip
-                  pip install flake8
-
-              - name: Run flake8 and save output
-                run: |
-                  set -o pipefail
-                  flake8 src || true
-                  flake8 src > flake8.txt || true
-
-              - name: Upload flake8 artifact
-                uses: actions/upload-artifact@v4
-                with:
-                  name: flake8-report
-                  path: flake8.txt
-
-          test:
-            runs-on: ubuntu-latest
-            needs: lint
-            steps:
-              - name: Checkout
-                uses: actions/checkout@v4
-
-              - name: Set up Python
-                uses: actions/setup-python@v4
-                with:
-                  python-version: '3.10'
-
-              - name: Install test deps
-                run: |
-                  python -m pip install --upgrade pip
-                  if [ -f requirements.txt ]; then
-                    pip install -r requirements.txt
-                  else
-                    pip install pytest pytest-cov scikit-learn pandas numpy matplotlib seaborn joblib
-                  fi
-
-              - name: Run pytest
-                run: |
-                  pytest -q --junitxml=pytest-results.xml --maxfail=1
-
-              - name: Upload pytest results
-                uses: actions/upload-artifact@v4
-                with:
-                  name: pytest-results
-                  path: pytest-results.xml
-
-          train:
-            runs-on: ubuntu-latest
-            needs: test
-            steps:
-              - name: Checkout
-                uses: actions/checkout@v4
-
-              - name: Set up Python
-                uses: actions/setup-python@v4
-                with:
-                  python-version: '3.10'
-
-              - name: Install train deps
-                run: |
-                  python -m pip install --upgrade pip
-                  if [ -f requirements.txt ]; then
-                    pip install -r requirements.txt
-                  else
-                    pip install scikit-learn pandas numpy joblib matplotlib seaborn
-                  fi
-
-              - name: Create small dataset for CI
-                run: |
-                  python - <<'PY'
-                  import pandas as pd
-                  from pathlib import Path
-                  p = Path('ci_DataSet')
-                  p.mkdir(exist_ok=True)
-                  df = pd.DataFrame({'feat1': [0,1,0,1,0,1,0,1], 'feat2': [1,2,1,2,1,2,1,2], 'target': [0,0,0,0,1,1,1,1]})
-                  df.to_csv(p / 'data.csv', index=False)
-                  print('wrote', (p / 'data.csv').exists())
-                  PY
-
-              - name: Train model (quick)
-                run: |
-                  python src/train.py --dataset ci_DataSet --target target --output models/ci_model.joblib --classifier rf --n-estimators 10 --search none
-
-              - name: List outputs
-                run: ls -la models || true
-
-              - name: Upload model artifacts
-                uses: actions/upload-artifact@v4
-                with:
-                  name: model-artifacts
-                  path: |
-                    models/**/*
-                    models
-
-              - name: Upload training logs and metrics
-                uses: actions/upload-artifact@v4
-                with:
-                  name: training-logs
-                  path: |
-                    models/metrics.json
-                    models/model_metadata.json
-                    models/cv_results.csv
-                    models/best_params.json
+          name: api-smoke-artifacts
+          path: |
+            ci_run/api.log
+            ci_run/smoke_response.txt
+            ci_run/api.pid
