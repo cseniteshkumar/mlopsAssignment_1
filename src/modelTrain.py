@@ -19,6 +19,12 @@ import mlflow.sklearn
 # Call this BEFORE importing sklearn estimators or metrics
 mlflow.sklearn.autolog(log_models=True)
 
+# mlflow.sklearn.autolog(log_datasets=False)
+mlflow.set_tracking_uri(f"file://{os.path.abspath(mlflow_dir)}")
+mlflow.sklearn.autolog(log_models=True, log_datasets=True)
+mlflow.set_experiment(experiment_name)
+
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -63,10 +69,14 @@ if not os.path.exists(mlflow_dir):
     os.makedirs(mlflow_dir)
 
 
-# mlflow.sklearn.autolog(log_datasets=False)
-mlflow.set_tracking_uri(f"file://{os.path.abspath(mlflow_dir)}")
-mlflow.sklearn.autolog(log_models=True, log_datasets=True)
-mlflow.set_experiment(experiment_name)
+models_dir = "../models"
+
+models_dir = Path(models_dir)
+
+if not os.path.exists(models_dir):
+    os.makedirs(models_dir)
+
+
 
 # Progress Bar
 try:
@@ -110,8 +120,10 @@ def modelTrain(data, model_path=None, generate_html=True):
     # Start a Parent Run to group all model attempts together
     with mlflow.start_run(run_name="Algorithm_Comparison_Suite"):
         results = {}
+        saved_artifacts = {}
         
         for name, model in models.items():
+            safe_name = name.replace(" ", "_")
             # Start a Nested Child Run for each specific algorithm
             with mlflow.start_run(run_name=name, nested=True):
                 # Feature: Autologging (Captures parameters and basic metrics automatically)
@@ -144,7 +156,6 @@ def modelTrain(data, model_path=None, generate_html=True):
                 # but an explicit log helps if autolog missed it)
                 try:
                     # register the model in the MLflow Model Registry using a safe name
-                    safe_name = name.replace(" ", "_")
                     mlflow.sklearn.log_model(model, artifact_path="model", registered_model_name=safe_name)
                 except Exception:
                     pass
@@ -156,8 +167,24 @@ def modelTrain(data, model_path=None, generate_html=True):
                         # last-resort: continue without failing the whole loop
                         mlflow.set_tag("model_logging_failed", "true")
                 
-                results[name] = acc
+                results[name] = {"accuracy": acc, "recall": recall, "f1_score": f1}
                 print(f"{name} | Acc: {acc:.2%} | Recall: {recall:.2%} | F1 Score: {f1:.2%}")
+
+                # Save model artifact locally for future prediction pipeline
+                try:
+                    model_file = models_dir / f"{safe_name}.joblib"
+                    joblib.dump(model, model_file)
+                    saved_artifacts[name] = str(model_file)
+                except Exception:
+                    saved_artifacts[name] = None
+
+        # Persist summary of results and saved artifact locations
+        try:
+            with open(models_dir / "metrics.json", "w") as f:
+                json.dump({"results": results, "artifacts": saved_artifacts}, f, indent=2)
+        except Exception:
+            pass
+
 
     return results
 
