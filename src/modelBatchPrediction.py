@@ -77,7 +77,7 @@ def predict_and_save(model, X: pd.DataFrame, output_path: Path):
         except Exception:
             proba = None
 
-    out_df.to_csv(output_path, index=True)
+    out_df.to_csv(output_path, index=False)
     return out_df
 
 
@@ -100,15 +100,9 @@ def batchPrediction(
 
 if __name__ == "__main__":
 
-    model = Path("models/deployed_model.joblib")
-    data = batchProcessing / "batchPrediction.csv"
-    output = batchProcessing / "batch_predictions.csv"
+    model = Path("../models/deployed_model.joblib")
+    data = batchProcessing / "batchData.csv"
+    output = batchProcessing / "batchPrediction.csv"
     target_column = "num"
 
-
-    batchPrediction(
-    model_path: Path,
-    data_path: Path,
-    output_path: Path,
-    target_column: str = None
-):
+    batchPrediction(model, data, output, target_column)
