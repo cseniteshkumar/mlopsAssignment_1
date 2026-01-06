@@ -34,12 +34,9 @@ mlflow.set_experiment(experiment_name)
 
 from src.dataRead import load_dataset
 from src.dataClean import clean_data
-
-# from src.modelTrain import monitor_resources, start_monitoring, stop_monitoring, modelTrain
-
 from src.modelTrain import modelTrain
+from src.modelDeploy import modelDeploy
 
-output_dir = "../outputs/modelTrain"
 
 models_dir = "../models"
 
@@ -65,11 +62,13 @@ def trainingPipeline():
 
         data = clean_data(data)
         traingResult = modelTrain(data)
+        deployedModel = modelDeploy()
 
         mlflow.log_param("Data set", data)
-        mlflow.log_param("Dataset Shape : ", str(data.shape))
-        mlflow.log_param("random_state : ", str(42))
-        mlflow.log_metric("num_rows", data.shape[0])
+        mlflow.log_metric("random_state : ", str(42))
+        mlflow.log_metric("Dataset Shape", str(data.shape))
+        mlflow.log_metric("traingResult", traingResult)
+        mlflow.log_metric("Model Deployed : ", str(deployedModel))
         
         print(traingResult)
 

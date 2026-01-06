@@ -1,0 +1,14 @@
+artifact_uri: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/17aab57d5de7472bad1a8940b3707c9e/artifacts
+end_time: 1767690855144
+entry_point_name: ''
+experiment_id: '714048931907858433'
+lifecycle_stage: active
+run_id: 17aab57d5de7472bad1a8940b3707c9e
+run_name: Model_Deployment
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1767690855137
+status: 4
+tags: []
+user_id: niteshkumar
