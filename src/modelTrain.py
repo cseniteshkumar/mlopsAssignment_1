@@ -9,17 +9,22 @@ from pyexpat import model
 import sys
 import os
 
-import pathlib
+from pathlib import Path
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import mlflow
 import mlflow.sklearn
 
-# Call this BEFORE importing sklearn estimators or metrics
-mlflow.sklearn.autolog(log_models=True)
+experiment_name="Heart_Disease_Analysis"
 
-# mlflow.sklearn.autolog(log_datasets=False)
+mlflow_dir = "../mlruns"
+
+mlflow_dir = Path(mlflow_dir)
+
+if not os.path.exists(mlflow_dir):
+    os.makedirs(mlflow_dir)
+
 mlflow.set_tracking_uri(f"file://{os.path.abspath(mlflow_dir)}")
 mlflow.sklearn.autolog(log_models=True, log_datasets=True)
 mlflow.set_experiment(experiment_name)
@@ -29,7 +34,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from pathlib import Path
+
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -52,22 +57,10 @@ from sklearn.naive_bayes import GaussianNB
 from datetime import datetime
 
 
-
-
-experiment_name="Heart_Disease_Analysis"
-
 from src.dataRead import load_dataset
 from src.dataClean import clean_data
 
 output_dir = "../outputs/modelTrain"
-
-mlflow_dir = "../mlruns"
-
-mlflow_dir = Path(mlflow_dir)
-
-if not os.path.exists(mlflow_dir):
-    os.makedirs(mlflow_dir)
-
 
 models_dir = "../models"
 
@@ -75,7 +68,6 @@ models_dir = Path(models_dir)
 
 if not os.path.exists(models_dir):
     os.makedirs(models_dir)
-
 
 
 # Progress Bar
@@ -107,6 +99,13 @@ def modelTrain(data, model_path=None, generate_html=True):
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
+
+    # persist scaler and feature list for inference pipeline
+    try:
+        joblib.dump(scaler, models_dir / "scaler.joblib")
+        joblib.dump(X.columns.tolist(), models_dir / "features.joblib")
+    except Exception:
+        pass
 
     models = {
         "Logistic_Regression": LogisticRegression(),

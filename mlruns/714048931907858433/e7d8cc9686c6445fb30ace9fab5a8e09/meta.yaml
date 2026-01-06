@@ -1,0 +1,14 @@
+artifact_uri: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/e7d8cc9686c6445fb30ace9fab5a8e09/artifacts
+end_time: 1767677122788
+entry_point_name: ''
+experiment_id: '714048931907858433'
+lifecycle_stage: active
+run_id: e7d8cc9686c6445fb30ace9fab5a8e09
+run_name: Naive_Bayes
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1767677119781
+status: 3
+tags: []
+user_id: niteshkumar
