@@ -71,8 +71,6 @@ def select_best_balanced_model(results_data):
 
 
 def modelDeploy():
-    if mlflow.active_run():
-        mlflow.end_run()
     with mlflow.start_run(run_name="Model_Deployment", nested=True):
         # refer to the experiment
         results_data_path = Path(models_dir) / "metrics.json"

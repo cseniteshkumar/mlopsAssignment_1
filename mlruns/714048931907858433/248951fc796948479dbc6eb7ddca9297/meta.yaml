@@ -1,0 +1,14 @@
+artifact_uri: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/248951fc796948479dbc6eb7ddca9297/artifacts
+end_time: 1767691565066
+entry_point_name: ''
+experiment_id: '714048931907858433'
+lifecycle_stage: active
+run_id: 248951fc796948479dbc6eb7ddca9297
+run_name: Random_Forest
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1767691561594
+status: 3
+tags: []
+user_id: niteshkumar

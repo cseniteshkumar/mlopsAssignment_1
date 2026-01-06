@@ -1,0 +1,14 @@
+artifact_uri: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/35df9b19592740c7ae0049c8e847cb72/artifacts
+end_time: 1767691561593
+entry_point_name: ''
+experiment_id: '714048931907858433'
+lifecycle_stage: active
+run_id: 35df9b19592740c7ae0049c8e847cb72
+run_name: Logistic_Regression
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1767691558086
+status: 3
+tags: []
+user_id: niteshkumar

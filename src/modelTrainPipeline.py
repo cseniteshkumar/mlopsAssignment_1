@@ -53,9 +53,6 @@ except ImportError:
 
 
 def trainingPipeline():
-    if mlflow.active_run():
-        mlflow.end_run()
-
     with mlflow.start_run(run_name="Training Pipeline", nested=True ):
 
         data = load_dataset()
@@ -65,10 +62,10 @@ def trainingPipeline():
         deployedModel = modelDeploy()
 
         mlflow.log_param("Data set", data)
-        mlflow.log_metric("random_state : ", str(42))
-        mlflow.log_metric("Dataset Shape", str(data.shape))
-        mlflow.log_metric("traingResult", traingResult)
-        mlflow.log_metric("Model Deployed : ", str(deployedModel))
+        mlflow.log_metric("random_state : ", int(42))
+        mlflow.log_param("Dataset Shape", str(data.shape))
+        mlflow.log_dict(traingResult, "traingResult.json")
+        mlflow.log_param("Model Deployed : ", str(deployedModel))
         
         print(traingResult)
 

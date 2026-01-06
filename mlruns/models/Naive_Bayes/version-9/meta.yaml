@@ -1,0 +1,15 @@
+creation_timestamp: 1767692062334
+current_stage: None
+deployment_job_state: null
+description: null
+last_updated_timestamp: 1767692062334
+model_id: m-3db9390f1f904510aa2fd96e3db9e1b5
+name: Naive_Bayes
+run_id: b70e2471906d489485d6ac35b304882e
+run_link: null
+source: models:/m-3db9390f1f904510aa2fd96e3db9e1b5
+status: READY
+status_message: null
+storage_location: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/models/m-3db9390f1f904510aa2fd96e3db9e1b5/artifacts
+user_id: null
+version: 9

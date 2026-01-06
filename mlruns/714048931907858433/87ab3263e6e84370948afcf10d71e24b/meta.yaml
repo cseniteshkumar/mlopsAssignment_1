@@ -1,0 +1,14 @@
+artifact_uri: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/87ab3263e6e84370948afcf10d71e24b/artifacts
+end_time: 1767692042640
+entry_point_name: ''
+experiment_id: '714048931907858433'
+lifecycle_stage: active
+run_id: 87ab3263e6e84370948afcf10d71e24b
+run_name: Training Pipeline
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1767692042625
+status: 3
+tags: []
+user_id: niteshkumar
