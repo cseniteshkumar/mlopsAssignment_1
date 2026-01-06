@@ -13,8 +13,24 @@ from io import BytesIO
 import joblib
 import pandas as pd
 import traceback
+from typing import Optional
+from typing import List, Dict, Optional, Union
 
-app = FastAPI(title="Assignment1 Model API")
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Load the model
+    global model
+    if MODEL_PATH.exists():
+        model = joblib.load(str(MODEL_PATH))
+    else:
+        model = None
+    yield
+    # Clean up (if needed) happens here
+
+
+app = FastAPI(title="Assignment1 Model API", lifespan=lifespan)
 
 MODEL_PATH = Path("models/deployed_model.joblib")
 model = None
@@ -27,6 +43,12 @@ def load_model():
         model = joblib.load(str(MODEL_PATH))
     else:
         model = None
+
+
+
+@app.get("/")
+def read_root():
+    return {"status": "Server is running", "docs": "/docs"}
 
 
 @app.get("/health")
@@ -59,7 +81,7 @@ async def predictFile(file: UploadFile = File(...)):
 
 
 @app.post("/predict")
-async def predict(features: Optional[dict] = None):
+async def predict(features: dict | None = None):
     """
     Predict for a single sample passed as JSON in the request body.
     Example JSON:
