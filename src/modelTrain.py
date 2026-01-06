@@ -12,23 +12,62 @@ import pathlib
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+import mlflow
+import mlflow.sklearn
+
+# Call this BEFORE importing sklearn estimators or metrics
+mlflow.sklearn.autolog(log_models=True)
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pathlib import Path
+
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
+from sklearn.metrics import recall_score, precision_score, f1_score
+
+from sklearn.model_selection import train_test_split, cross_validate, RandomizedSearchCV, GridSearchCV
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score, roc_curve
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.neighbors import KNeighborsClassifier
+
+
+
+from datetime import datetime
+
+
+
+
+experiment_name="Heart_Disease_Analysis"
 
 from src.dataRead import load_dataset
 from src.dataClean import clean_data
 
 output_dir = "../outputs/modelTrain"
 
+
+# mlflow.sklearn.autolog(log_datasets=False)
+mlflow.sklearn.autolog(log_datasets=True)
+mlflow.set_experiment(experiment_name)
+
+# Progress Bar
+try:
+    from tqdm.auto import tqdm
+except ImportError:
+    def tqdm(iterable, **kwargs): return iterable
+
+
 def modelTrain(data, model_path=None, generate_html=True):
     """
-    
+    Training the different model and storing for reference.     
     """
     df = data.copy()
 
@@ -39,65 +78,56 @@ def modelTrain(data, model_path=None, generate_html=True):
     
 
     
-# import mlflow
-# import mlflow.sklearn
-# from sklearn.metrics import recall_score, precision_score, f1_score
-
-# def train_and_evaluate_with_mlflow(df, experiment_name="Heart_Disease_Analysis"):
-#     # 1. Setup MLflow Experiment
-#     mlflow.set_experiment(experiment_name)
+    # 1. Setup MLflow Experiment
     
-#     X = df.drop('target', axis=1)
-#     y = df['target']
-#     X_train, X_test, y_train, y_test = train_test_split(
-#         X, y, test_size=0.2, random_state=42, stratify=y
-#     )
+    X = df.drop('target', axis=1)
+    y = df['target']
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42, stratify=y
+    )
 
-#     scaler = StandardScaler()
-#     X_train_scaled = scaler.fit_transform(X_train)
-#     X_test_scaled = scaler.transform(X_test)
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
 
-#     models = {
-#         "Logistic_Regression": LogisticRegression(),
-#         "Random_Forest": RandomForestClassifier(n_estimators=100, random_state=42),
-#         "SVM": SVC(probability=True),
-#         "KNN": KNeighborsClassifier(n_neighbors=5)
-#     }
+    models = {
+        "Logistic_Regression": LogisticRegression(),
+        "Random_Forest": RandomForestClassifier(n_estimators=100, random_state=42),
+        "SVM": SVC(probability=True),
+        "KNN": KNeighborsClassifier(n_neighbors=5)
+    }
 
-#     # Start a Parent Run to group all model attempts together
-#     with mlflow.start_run(run_name="Algorithm_Comparison_Suite"):
-#         results = {}
+    # Start a Parent Run to group all model attempts together
+    with mlflow.start_run(run_name="Algorithm_Comparison_Suite"):
+        results = {}
         
-#         for name, model in models.items():
-#             # Start a Nested Child Run for each specific algorithm
-#             with mlflow.start_run(run_name=name, nested=True):
-#                 # Feature: Autologging (Captures parameters and basic metrics automatically)
-#                 mlflow.sklearn.autolog(log_models=True)
+        for name, model in models.items():
+            # Start a Nested Child Run for each specific algorithm
+            with mlflow.start_run(run_name=name, nested=True):
+                # Feature: Autologging (Captures parameters and basic metrics automatically)
+                mlflow.sklearn.autolog(log_models=True)
                 
-#                 model.fit(X_train_scaled, y_train)
-#                 predictions = model.predict(X_test_scaled)
+                # model.fit(X_train_scaled, y_train)
+                model.fit(X_train_scaled, y_train.values)
+                predictions = model.predict(X_test_scaled)
                 
-#                 # Feature: Custom Metrics (Crucial for medical data)
-#                 acc = accuracy_score(y_test, predictions)
-#                 recall = recall_score(y_test, predictions)
-#                 f1 = f1_score(y_test, predictions)
+                # Feature: Custom Metrics (Crucial for medical data)
+                acc = accuracy_score(y_test, predictions)
+                recall = recall_score(y_test, predictions)
+                f1 = f1_score(y_test, predictions)
                 
-#                 # Manual logging for extra metrics not in autolog
-#                 mlflow.log_metric("accuracy", acc)
-#                 mlflow.log_metric("recall", recall)
-#                 mlflow.log_metric("f1_score", f1)
+                # Manual logging for extra metrics not in autolog
+                mlflow.log_metric("accuracy", acc)
+                mlflow.log_metric("recall", recall)
+                mlflow.log_metric("f1_score", f1)
                 
-#                 # Feature: Tagging for easier searching
-#                 mlflow.set_tag("model_family", "ensemble" if "Forest" in name else "linear")
+                # Feature: Tagging for easier searching
+                mlflow.set_tag("model_family", "ensemble" if "Forest" in name else "linear")
                 
-#                 results[name] = acc
-#                 print(f"{name:<20} | Acc: {acc:.2%} | Recall: {recall:.2%}")
+                results[name] = acc
+                print(f"{name:<20} | Acc: {acc:.2%} | Recall: {recall:.2%}")
 
-#     return results
-
-# # Execution
-# results = train_and_evaluate_with_mlflow(cleaned_df)
-
+    return results
 
 
 
@@ -105,4 +135,5 @@ if __name__ == "__main__":
     data = load_dataset()
 
     data = clean_data(data)
-    modelTrain(data)
+    result =  modelTrain(data)
+    print("Training Result : "+str(result))
