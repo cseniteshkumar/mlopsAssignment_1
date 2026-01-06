@@ -16,7 +16,7 @@ import traceback
 
 app = FastAPI(title="Assignment1 Model API")
 
-MODEL_PATH = Path("models/model.joblib")
+MODEL_PATH = Path("models/deployed_model.joblib")
 model = None
 
 
@@ -34,8 +34,11 @@ def health():
     return {"status": "ok", "model_loaded": model is not None}
 
 
-@app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+@app.post("/predictFile")
+async def predictFile(file: UploadFile = File(...)):
+    """
+    Predict from an uploaded CSV file (multiple rows allowed).
+    """
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
@@ -53,3 +56,66 @@ async def predict(file: UploadFile = File(...)):
     except Exception as e:
         tb = traceback.format_exc()
         raise HTTPException(status_code=400, detail=f"Failed to predict: {e}\n{tb}")
+
+
+@app.post("/predict")
+async def predict(features: Optional[dict] = None):
+    """
+    Predict for a single sample passed as JSON in the request body.
+    Example JSON:
+      { "features": {"feat1": 1.2, "feat2": 3, "feat3": "A"} }
+
+    Accepts:
+      - features as a dict (mapping feature_name -> value)
+      - if the top-level JSON is a dict of features directly (FastAPI will send it to `features` param),
+        it will work as well.
+
+    Returns a single prediction.
+
+    Sample Call :
+    {
+    "age": 63.0,
+    "sex": 1.0,
+    "cp": 1.0,
+    "trestbps": 145.0,
+    "chol": 233.0,
+    "fbs": 1.0,
+    "restecg": 2.0,
+    "thalach": 150.0,
+    "exang": 0.0,
+    "oldpeak": 2.3,
+    "slope": 3.0,
+    "ca": 0.0,
+    "thal": 6.0
+}
+
+    """
+    if model is None:
+        raise HTTPException(status_code=503, detail="Model not loaded")
+
+    if features is None:
+        raise HTTPException(status_code=400, detail="Missing 'features' JSON payload")
+
+    try:
+        # If features is a mapping, create single-row DataFrame
+        if isinstance(features, dict):
+            df = pd.DataFrame([features])
+        elif isinstance(features, list):
+            # list of values -> single-row with numeric positions; user must ensure correct order
+            df = pd.DataFrame([features])
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported features payload type")
+
+        # Drop common target column names if present
+        for c in ["target", "label", "class", "y", "num"]:
+            if c in df.columns:
+                df = df.drop(columns=[c])
+
+        preds = model.predict(df)
+        p = preds[0]
+        return {"prediction": int(p) if (hasattr(p, "__int__")) else p}
+    except HTTPException:
+        raise
+    except Exception as e:
+        tb = traceback.format_exc()
+        raise HTTPException(status_code=400, detail=f"Failed to predict single sample: {e}\n{tb}")
