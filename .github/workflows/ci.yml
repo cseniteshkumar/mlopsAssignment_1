@@ -17,13 +17,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.12.3'
 
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
+          if [ -f requirements-prod.txt ]; then
+            pip install -r requirements-prod.txt
           else
             pip install uvicorn fastapi flask requests
           fi
