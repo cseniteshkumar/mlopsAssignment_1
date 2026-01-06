@@ -90,7 +90,6 @@ docker-compose.*.yml
 
 # ------------------ ML / experiments / models / artifacts ------------------
 mlruns/
-models/
 artifacts/
 artifacts/**
 *.joblib
