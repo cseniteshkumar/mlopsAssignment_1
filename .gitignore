@@ -91,7 +91,6 @@ docker-compose.*.yml
 # ------------------ ML / experiments / models / artifacts ------------------
 artifacts/
 artifacts/**
-*.joblib
 *.pkl
 *.onnx
 *.h5
