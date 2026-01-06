@@ -1,10 +1,11 @@
-"""Exploratory data analysis utilities.
-
-Generates histograms for numeric features, a correlation heatmap, and class balance plot.
-Saves PNGs to the output directory.
-
+"""
+Model Training Module
+This module handles the training of various machine learning models
+on the heart disease dataset, utilizing MLflow for experiment tracking
+and model management.
 """
 
+from pyexpat import model
 import sys
 import os
 
@@ -85,8 +86,6 @@ def modelTrain(data, model_path=None, generate_html=True):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
-
-    
     # 1. Setup MLflow Experiment
     
     X = df.drop('target', axis=1)
@@ -117,6 +116,9 @@ def modelTrain(data, model_path=None, generate_html=True):
             with mlflow.start_run(run_name=name, nested=True):
                 # Feature: Autologging (Captures parameters and basic metrics automatically)
                 mlflow.sklearn.autolog(log_models=True)
+
+                # Tag the run with a clear model name for UI/search
+                # mlflow.set_tag("model_name", name)
                 
                 # model.fit(X_train_scaled, y_train)
                 model.fit(X_train_scaled, y_train.values)
@@ -138,10 +140,21 @@ def modelTrain(data, model_path=None, generate_html=True):
 
                 # ensure the fitted model artifact is recorded (autolog usually does this,
                 # but an explicit log helps if autolog missed it)
+                # ensure the fitted model artifact is recorded (autolog usually does this,
+                # but an explicit log helps if autolog missed it)
                 try:
-                    mlflow.sklearn.log_model(model, artifact_path="model")
+                    # register the model in the MLflow Model Registry using a safe name
+                    safe_name = name.replace(" ", "_")
+                    mlflow.sklearn.log_model(model, artifact_path="model", registered_model_name=safe_name)
                 except Exception:
                     pass
+                    # fallback: log without registering and add a tag so you can find it
+                    try:
+                        mlflow.sklearn.log_model(model, artifact_path=f"model_{safe_name}")
+                        mlflow.set_tag("model_registered", "false")
+                    except Exception:
+                        # last-resort: continue without failing the whole loop
+                        mlflow.set_tag("model_logging_failed", "true")
                 
                 results[name] = acc
                 print(f"{name} | Acc: {acc:.2%} | Recall: {recall:.2%} | F1 Score: {f1:.2%}")
