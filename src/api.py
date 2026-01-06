@@ -1,3 +1,4 @@
+# ...existing code...
 """FastAPI server wrapping the project's prediction pipeline.
 
 Provides:
@@ -13,39 +14,50 @@ from io import BytesIO
 import joblib
 import pandas as pd
 import traceback
-from typing import Optional
 from typing import List, Dict, Optional, Union
 
-from contextlib import asynccontextmanager
+# ...existing code...
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Load the model
-    global model
-    if MODEL_PATH.exists():
-        model = joblib.load(str(MODEL_PATH))
-    else:
-        model = None
-    yield
-    # Clean up (if needed) happens here
+app = FastAPI(title="Assignment1 Model API")
 
+# Resolve model path relative to this file so app works regardless of CWD
+def _find_model_path() -> Path:
+    base = Path(__file__).resolve().parent.parent  # project root
+    candidates = [
+        base / "models" / "deployed_model.joblib",
+        base / "models" / "model.joblib",
+        base / "models" / "model.pkl",
+        base / "model.joblib",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    # default to common location even if not present
+    return base / "models" / "deployed_model.joblib"
 
-app = FastAPI(title="Assignment1 Model API", lifespan=lifespan)
-
-MODEL_PATH = Path("models/deployed_model.joblib")
+MODEL_PATH = _find_model_path()
 model = None
-
+model_load_error: Optional[str] = None
 
 @app.on_event("startup")
 def load_model():
-    global model
-    if MODEL_PATH.exists():
-        model = joblib.load(str(MODEL_PATH))
-    else:
+    global model, model_load_error, MODEL_PATH
+    try:
+        if MODEL_PATH.exists():
+            model = joblib.load(str(MODEL_PATH))
+            model_load_error = None
+            print(f"Loaded model from {MODEL_PATH}")
+        else:
+            model = None
+            model_load_error = f"Model path does not exist: {MODEL_PATH}"
+            print(model_load_error)
+    except Exception as e:
         model = None
+        model_load_error = f"Failed to load model: {e}"
+        print(model_load_error)
+        traceback.print_exc()
 
-
-
+# ...existing code...
 @app.get("/")
 def read_root():
     return {"status": "Server is running", "docs": "/docs"}
@@ -53,9 +65,14 @@ def read_root():
 
 @app.get("/health")
 def health():
-    return {"status": "ok", "model_loaded": model is not None}
+    return {
+        "status": "ok",
+        "model_loaded": model is not None,
+        "model_path": str(MODEL_PATH),
+        "load_error": model_load_error,
+    }
 
-
+# ...existing code...
 @app.post("/predictFile")
 async def predictFile(file: UploadFile = File(...)):
     """
@@ -95,7 +112,8 @@ async def predict(features: dict | None = None):
     Returns a single prediction.
 
     Sample Call :
-    {
+ \n
+   {
     "age": 63.0,
     "sex": 1.0,
     "cp": 1.0,
@@ -108,8 +126,7 @@ async def predict(features: dict | None = None):
     "oldpeak": 2.3,
     "slope": 3.0,
     "ca": 0.0,
-    "thal": 6.0
-}
+    "thal": 6.0 }
 
     """
     if model is None:
