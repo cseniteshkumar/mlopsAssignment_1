@@ -1,3 +1,9 @@
+NITESH KUMAR ----- 2024AA05143 ----- 100%
+LAWLESH KUMAR ----- 2024AA05149 ----- 100%
+VAIBHAV SAREEN ----- 2024AA05923 ----- 100%
+VIVEK TRIVEDI ----- 2024AA05922 ----- 100%
+BINDU MANOJ ----- 2024AA05979 ----- 100%
+
 
 
 # MLOps Assignment — Quick reference
