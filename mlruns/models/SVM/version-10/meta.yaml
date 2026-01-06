@@ -1,0 +1,15 @@
+creation_timestamp: 1767692139295
+current_stage: None
+deployment_job_state: null
+description: null
+last_updated_timestamp: 1767692139295
+model_id: m-7a6b45f9e5494c4b8cce65792d322cf2
+name: SVM
+run_id: a5b58436ad404adfa0a5bb6af2547b51
+run_link: null
+source: models:/m-7a6b45f9e5494c4b8cce65792d322cf2
+status: READY
+status_message: null
+storage_location: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/models/m-7a6b45f9e5494c4b8cce65792d322cf2/artifacts
+user_id: null
+version: 10
