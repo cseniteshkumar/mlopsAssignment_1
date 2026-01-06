@@ -1,0 +1,15 @@
+creation_timestamp: 1767675376867
+current_stage: None
+deployment_job_state: null
+description: null
+last_updated_timestamp: 1767675376867
+model_id: m-92270271014547559b7ffc0391194833
+name: Logistic_Regression
+run_id: 97023c76337b439babaf3955287fd37f
+run_link: null
+source: models:/m-92270271014547559b7ffc0391194833
+status: READY
+status_message: null
+storage_location: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/models/m-92270271014547559b7ffc0391194833/artifacts
+user_id: null
+version: 2

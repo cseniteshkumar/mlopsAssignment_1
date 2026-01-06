@@ -1,0 +1,14 @@
+artifact_uri: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/698757096271136192/b1f4e92a3d1343be95b0ec47ceba10e4/artifacts
+end_time: 1767531643079
+entry_point_name: ''
+experiment_id: '698757096271136192'
+lifecycle_stage: active
+run_id: b1f4e92a3d1343be95b0ec47ceba10e4
+run_name: DataSet-rf-20260104T130040Z
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1767531640970
+status: 3
+tags: []
+user_id: niteshkumar

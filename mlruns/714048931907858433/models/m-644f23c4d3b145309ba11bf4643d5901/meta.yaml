@@ -1,0 +1,10 @@
+artifact_location: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/models/m-644f23c4d3b145309ba11bf4643d5901/artifacts
+creation_timestamp: 1767675386193
+experiment_id: '714048931907858433'
+last_updated_timestamp: 1767675387539
+model_id: m-644f23c4d3b145309ba11bf4643d5901
+model_type: null
+name: model
+source_run_id: 9524a5c53b7e4a4ab1f699a2312c9192
+status: 2
+status_message: null

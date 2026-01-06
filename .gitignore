@@ -89,7 +89,6 @@ docker-compose.*.yml
 .kube/
 
 # ------------------ ML / experiments / models / artifacts ------------------
-mlruns/
 artifacts/
 artifacts/**
 *.joblib
