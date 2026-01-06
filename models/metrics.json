@@ -1,0 +1,42 @@
+{
+  "results": {
+    "Logistic_Regression": {
+      "accuracy": 0.8688524590163934,
+      "recall": 0.9285714285714286,
+      "f1_score": 0.8666666666666667
+    },
+    "Random_Forest": {
+      "accuracy": 0.8852459016393442,
+      "recall": 0.9642857142857143,
+      "f1_score": 0.8852459016393442
+    },
+    "SVM": {
+      "accuracy": 0.8524590163934426,
+      "recall": 0.8928571428571429,
+      "f1_score": 0.847457627118644
+    },
+    "KNN": {
+      "accuracy": 0.8688524590163934,
+      "recall": 0.9642857142857143,
+      "f1_score": 0.8709677419354839
+    },
+    "Gradient_Boosting": {
+      "accuracy": 0.8524590163934426,
+      "recall": 0.9285714285714286,
+      "f1_score": 0.8524590163934426
+    },
+    "Naive_Bayes": {
+      "accuracy": 0.8688524590163934,
+      "recall": 0.9642857142857143,
+      "f1_score": 0.8709677419354839
+    }
+  },
+  "artifacts": {
+    "Logistic_Regression": "../models/Logistic_Regression.joblib",
+    "Random_Forest": "../models/Random_Forest.joblib",
+    "SVM": "../models/SVM.joblib",
+    "KNN": "../models/KNN.joblib",
+    "Gradient_Boosting": "../models/Gradient_Boosting.joblib",
+    "Naive_Bayes": "../models/Naive_Bayes.joblib"
+  }
+}

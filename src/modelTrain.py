@@ -5,6 +5,7 @@ on the heart disease dataset, utilizing MLflow for experiment tracking
 and model management.
 """
 
+from asyncio.log import logger
 from pyexpat import model
 import sys
 import os
@@ -53,8 +54,23 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 
 
-
 from datetime import datetime
+
+
+
+
+
+import joblib
+import json
+import psutil
+import threading
+import time
+import tempfile
+import logging
+
+from sklearn.metrics import RocCurveDisplay
+
+
 
 
 from src.dataRead import load_dataset
@@ -77,11 +93,38 @@ except ImportError:
     def tqdm(iterable, **kwargs): return iterable
 
 
+# helper: monitor system metrics while a training call is running
+def monitor_resources(stop_event, interval=0.5):
+    samples = {"ts": [], "cpu": [], "mem": []}
+    while not stop_event.is_set():
+        samples["ts"].append(time.time())
+        samples["cpu"].append(psutil.cpu_percent(interval=None))
+        samples["mem"].append(psutil.virtual_memory().percent)
+        stop_event.wait(interval)
+    return samples
+def start_monitoring():
+    stop_event = threading.Event()
+    results = {}
+    def _runner():
+        results.update(monitor_resources(stop_event))
+    t = threading.Thread(target=_runner, daemon=True)
+    t.start()
+    return stop_event, results, t
+def stop_monitoring(stop_event, thread):
+    stop_event.set()
+    thread.join(timeout=5)
+    # results dict will be filled (captured by closure)
+    return
+
+
 def modelTrain(data, model_path=None, generate_html=True):
     """
     Training the different model and storing for reference.     
     """
     df = data.copy()
+
+    logger = logging.getLogger("modelTrain")
+    logger.setLevel(logging.INFO)
 
     out_dir = Path(output_dir)
     
@@ -131,14 +174,89 @@ def modelTrain(data, model_path=None, generate_html=True):
                 # Tag the run with a clear model name for UI/search
                 # mlflow.set_tag("model_name", name)
                 
-                # model.fit(X_train_scaled, y_train)
-                model.fit(X_train_scaled, y_train.values)
+
+                mlflow.log_param("model_name", name)
+                # start resource monitoring and timing
+                stop_event, monitor_results, monitor_thread = start_monitoring()
+                run_start = time.time()
+                try:
+                    model.fit(X_train_scaled, y_train.values)
+                finally:
+                    run_end = time.time()
+                    stop_monitoring(stop_event, monitor_thread)
+                duration = run_end - run_start
+                # convert sampled series to lists (may be empty)
+                cpu_series = monitor_results.get("cpu", []) if isinstance(monitor_results, dict) else []
+                mem_series = monitor_results.get("mem", []) if isinstance(monitor_results, dict) else []
+                ts_series = monitor_results.get("ts", []) if isinstance(monitor_results, dict) else []
+                # aggregate system metrics
+                if cpu_series:
+                    cpu_avg = float(np.mean(cpu_series))
+                    cpu_max = float(np.max(cpu_series))
+                else:
+                    cpu_avg = cpu_max = 0.0
+                if mem_series:
+                    mem_avg = float(np.mean(mem_series))
+                    mem_max = float(np.max(mem_series))
+                else:
+                    mem_avg = mem_max = 0.0
+                # Log duration and aggregated system metrics
+                mlflow.log_metric("training_duration_sec", duration)
+                mlflow.log_metric("sys_cpu_avg", cpu_avg)
+                mlflow.log_metric("sys_cpu_max", cpu_max)
+                mlflow.log_metric("sys_mem_avg", mem_avg)
+                mlflow.log_metric("sys_mem_max", mem_max)
+                # Save a trace (timestamps + samples) as an artifact
+                trace = {
+                    "model": name,
+                    "start_ts": run_start,
+                    "end_ts": run_end,
+                    "duration_sec": duration,
+                    "cpu_series": cpu_series,
+                    "mem_series": mem_series,
+                    "ts_series": ts_series
+                }
+                try:
+                    with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as tf:
+                        json.dump(trace, tf, indent=2)
+                        tf_path = tf.name
+                    mlflow.log_artifact(tf_path, artifact_path="traces")
+                except Exception as e:
+                    logger.warning("Failed to log trace artifact: %s", e)
+
+
+                # predictions and evaluation
                 predictions = model.predict(X_test_scaled)
                 
+
+                # predictions and evaluation
+                predictions = model.predict(X_test_scaled)
+                # try to get probabilistic scores for ROC/AUC
+                probas = None
+                try:
+                    probas = model.predict_proba(X_test_scaled)[:, 1]
+                except Exception:
+                    try:
+                        probas = model.decision_function(X_test_scaled)
+                    except Exception:
+                        probas = None
+
+
                 # Feature: Custom Metrics (Crucial for medical data)
                 acc = accuracy_score(y_test, predictions)
                 recall = recall_score(y_test, predictions)
                 f1 = f1_score(y_test, predictions)
+
+
+                # optionally log ROC AUC if scores available
+                try:
+                    if probas is not None:
+                        auc = roc_auc_score(y_test, probas)
+                        mlflow.log_metric("roc_auc", float(auc))
+                    else:
+                        auc = None
+                except Exception:
+                    auc = None
                 
                 # Manual logging for extra metrics not in autolog
                 mlflow.log_metric("accuracy", acc)
@@ -147,6 +265,35 @@ def modelTrain(data, model_path=None, generate_html=True):
                 
                 # Feature: Tagging for easier searching
                 mlflow.set_tag("model_family", "ensemble" if "Forest" in name else "linear")
+
+
+                # Log confusion matrix and ROC plot as artifacts
+                try:
+                    cm = confusion_matrix(y_test, predictions)
+                    fig_cm, ax_cm = plt.subplots(figsize=(4,4))
+                    sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax_cm)
+                    ax_cm.set_xlabel("Predicted")
+                    ax_cm.set_ylabel("Actual")
+                    ax_cm.set_title(f"Confusion Matrix - {name}")
+                    cm_path = out_dir / f"confusion_matrix_{safe_name}.png"
+                    fig_cm.savefig(cm_path, bbox_inches="tight")
+                    plt.close(fig_cm)
+                    mlflow.log_artifact(str(cm_path), artifact_path="plots")
+                except Exception as e:
+                    logger.warning("Failed to save/log confusion matrix: %s", e)
+
+                try:
+                    if probas is not None:
+                        fig_roc, ax_roc = plt.subplots(figsize=(6,4))
+                        RocCurveDisplay.from_predictions(y_test, probas, ax=ax_roc)
+                        ax_roc.set_title(f"ROC Curve - {name}")
+                        roc_path = out_dir / f"roc_{safe_name}.png"
+                        fig_roc.savefig(roc_path, bbox_inches="tight")
+                        plt.close(fig_roc)
+                        mlflow.log_artifact(str(roc_path), artifact_path="plots")
+                except Exception as e:
+                    logger.warning("Failed to save/log ROC plot: %s", e)
+
 
 
                 # ensure the fitted model artifact is recorded (autolog usually does this,
