@@ -35,9 +35,10 @@ from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, roc_auc_score, roc_curve
 from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
 from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.naive_bayes import GaussianNB
 
 
 
@@ -53,9 +54,17 @@ from src.dataClean import clean_data
 
 output_dir = "../outputs/modelTrain"
 
+mlflow_dir = "../mlruns"
+
+mlflow_dir = Path(mlflow_dir)
+
+if not os.path.exists(mlflow_dir):
+    os.makedirs(mlflow_dir)
+
 
 # mlflow.sklearn.autolog(log_datasets=False)
-mlflow.sklearn.autolog(log_datasets=True)
+mlflow.set_tracking_uri(f"file://{os.path.abspath(mlflow_dir)}")
+mlflow.sklearn.autolog(log_models=True, log_datasets=True)
 mlflow.set_experiment(experiment_name)
 
 # Progress Bar
@@ -94,7 +103,9 @@ def modelTrain(data, model_path=None, generate_html=True):
         "Logistic_Regression": LogisticRegression(),
         "Random_Forest": RandomForestClassifier(n_estimators=100, random_state=42),
         "SVM": SVC(probability=True),
-        "KNN": KNeighborsClassifier(n_neighbors=5)
+        "KNN": KNeighborsClassifier(n_neighbors=5),
+        "Gradient_Boosting": GradientBoostingClassifier(random_state=42),
+        "Naive_Bayes": GaussianNB()
     }
 
     # Start a Parent Run to group all model attempts together
@@ -123,9 +134,17 @@ def modelTrain(data, model_path=None, generate_html=True):
                 
                 # Feature: Tagging for easier searching
                 mlflow.set_tag("model_family", "ensemble" if "Forest" in name else "linear")
+
+
+                # ensure the fitted model artifact is recorded (autolog usually does this,
+                # but an explicit log helps if autolog missed it)
+                try:
+                    mlflow.sklearn.log_model(model, artifact_path="model")
+                except Exception:
+                    pass
                 
                 results[name] = acc
-                print(f"{name:<20} | Acc: {acc:.2%} | Recall: {recall:.2%}")
+                print(f"{name} | Acc: {acc:.2%} | Recall: {recall:.2%} | F1 Score: {f1:.2%}")
 
     return results
 
