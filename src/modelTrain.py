@@ -53,11 +53,7 @@ from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 
-
 from datetime import datetime
-
-
-
 
 
 import joblib
@@ -69,7 +65,6 @@ import tempfile
 import logging
 
 from sklearn.metrics import RocCurveDisplay
-
 
 
 
@@ -330,7 +325,6 @@ def modelTrain(data, model_path=None, generate_html=True):
                 json.dump({"results": results, "artifacts": saved_artifacts}, f, indent=2)
         except Exception:
             pass
-
 
     return results
 
