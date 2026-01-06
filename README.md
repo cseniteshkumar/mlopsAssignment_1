@@ -1,261 +1,241 @@
-# MLOps Assignment — scikit-learn pipeline
-
-This repository contains a reproducible scikit-learn training pipeline that:
-
-- loads tabular CSV data from `DataSet/` (the helper loader will auto-detect the target column when possible),
-- performs preprocessing (missing-value imputation, scaling for numeric features, one-hot encoding for categoricals),
-- trains and evaluates models (RandomForest, LogisticRegression, SVC supported),
-- supports hyperparameter search (GridSearchCV, RandomizedSearchCV, and manual randomized sampling with progress/early-stopping),
-- logs experiments and artifacts to MLflow (local file store by default),
-- provides EDA tooling and exports artifacts (plots, HTML report),
-- includes tests and small utilities (UCI fetch helper).
-
-## Quick start
-
-1. Create and activate a virtualenv (recommended):
-
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
-
-2. Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
-
-3. Put CSV files into the `DataSet/` directory. Each CSV should include the same set of feature columns; at least one file must contain the target column. If you don't know the target name, omit `--target` and the loader will try to auto-detect (looks for a `variables` CSV and common names like `target`, `class`, `label`, `num`).
-
-4. Fetch UCI dataset (optional):
-
-```bash
-python src/fetch_ucirepo.py --id 45 --out DataSet
-```
-
-5. Run training (example):
-
-```bash
-python src/train.py --dataset DataSet --target num --output models/model.joblib
-```
-
-## Useful commands and examples
-
-- Run EDA and generate plots:
-
-```bash
-python src/eda.py --dataset DataSet --target num --out outputs/eda --html
-```
-
-- Train with a hyperparameter grid search (GridSearchCV):
-
-```bash
-python src/train.py --dataset DataSet --target num --output models/best.joblib --search grid --search-cv 5 --classifier rf
-```
-
-- Randomized search with progress and early stopping (manual sampler):
-
-```bash
-python src/train.py --dataset DataSet --target num --output models/best_random.joblib --search random --n-iter 50 --progress --patience 10
-```
-
-- Compare models (LogisticRegression vs RandomForest) via cross-validation and export transformed features:
-
-```bash
-python src/train.py --dataset DataSet --target num --output models/final.joblib --compare-models --export-features
-```
-
-- Make predictions with a saved model:
-
-```bash
-python src/predict.py --model models/final.joblib --input DataSet/some_file.csv --output predictions.csv
-```
-
-## MLflow
-
-- By default MLflow uses a local file store at `./mlruns`. To inspect runs:
-
-```bash
-mlflow ui
-# then open http://127.0.0.1:5000
-```
-
-- Environment variables:
-  - `ENABLE_MLFLOW=0` — disable MLflow logging
-  - `MLFLOW_EXPERIMENT` — experiment name (default: `default`)
-  - `MLFLOW_TRACKING_URI` — if set, trainer will use this tracking URI
-
-- The training CLI uploads `cv_results.csv` and `best_params.json` when a hyperparameter search is used, and can create nested MLflow child runs for each candidate (`--mlflow-child-runs`).
-
-## Files and tools
-
-- `src/data.py` — dataset loader that concatenates CSVs in `DataSet/` and returns `X, y`.
-- `src/model.py` — builds preprocessing + classifier pipeline and contains train/evaluate helpers.
-- `src/train.py` — main CLI for training, search, MLflow logging, model comparison and feature export.
-- `src/eda.py` — EDA utilities (histograms, correlation heatmap, pairplots, per-class distributions, optional feature importances and simple HTML report).
-- `src/fetch_ucirepo.py` — helper to download datasets from the UCI ML repository via `ucimlrepo`.
-- `src/predict.py` — load a saved model and write predictions to CSV.
-- `tests/` — pytest-based tests. Run them with `python -m pytest`.
-
-## Model selection & evaluation
-
-- The preprocessing is: numeric median imputation + StandardScaler, categorical most-frequent imputation + OneHotEncoder.
-- Models supported: RandomForest (default), LogisticRegression, SVC.
-- Evaluation metrics logged and reported: accuracy, precision (macro), recall (macro), ROC AUC (binary uses `roc_auc`, multiclass uses `roc_auc_ovr`).
-- Cross-validation is used for model comparison (`--compare-models`) and for hyperparameter search (controlled with `--search` and `--search-cv`).
-- The trainer saves artifacts into the same directory as the `--output` model (e.g., `models/`): `metrics.json`, `model_metadata.json`, `cv_results.csv`, `best_params.json`, `model_comparison.json`, `model_selection.md`, `transformed_features.csv` (when exported).
-
-## Tests
-
-- Run the test suite with:
-
-```bash
-python -m pytest -q
-```
-
-## Notes & next steps
-
-- The repo includes a `Dockerfile` and a GitHub Actions workflow to run the tests. If you want, I can also package the project into a simple CLI distribution or add nested CV for model selection.
-
-If you'd like the README to include screenshots of EDA artifacts or a short tutorial notebook, tell me and I will generate them.
-
-## Run pipeline directly (no Airflow)
-
-If you prefer not to run the project under Airflow you can execute the end-to-end
-pipeline directly from the repository. Two lightweight options are provided:
-
-- Runner script (recommended): `run_pipeline.py` ensures the repository root is on
-  PYTHONPATH and calls the pipeline entrypoint. Example:
-
-```bash
-python run_pipeline.py --dataset DataSet --output models/model.joblib
-```
-
-- Direct module call: you can run the pipeline entrypoint directly from `src`:
-
-```bash
-python src/pipeline.py --dataset DataSet --output models/model.joblib
-```
-
-Notes:
-- Make sure dependencies are installed in a virtualenv (see Quick start). The
-  pipeline accepts the same `--dataset`, `--target`, and `--output` flags as
-  the Airflow tasks did.
-- MLflow integration is optional — set `ENABLE_MLFLOW=0` to disable logging or
-  set `MLFLOW_TRACKING_URI` / `MLFLOW_EXPERIMENT` to configure a remote server or
-  experiment name.
-
-Running the runner will produce the trained model at the `--output` path and
-write pipeline metadata/metrics next to the model (for example `models/pipeline_metrics.json`).
-# MLOps Assignment — scikit-learn pipeline
-
-This project contains a small scikit-learn based training pipeline that reads CSV files from the `DataSet/` folder, trains a classifier, evaluates it, and saves a trained model to `models/`.
-
-Quick start
-
-1. Install dependencies (preferably inside a virtualenv):
-
-```bash
-pip install -r requirements.txt
-```
-
-2. Put CSV files into the `DataSet/` directory. Each CSV should include a target column. If you don't know the target column name, you can omit `--target` and the loader will attempt to auto-detect it (it looks for a `variables` CSV and common names like `target`, `class`, `label`, `num`).
-
-3. (Optional) You can fetch UCI repository datasets directly using `ucimlrepo` and the included helper script. Example (dataset id 45 — Heart Disease):
-
-```bash
-python src/fetch_ucirepo.py --id 45 --out DataSet
-```
-
-4. Run training (example):
-
-```bash
-python src/train.py --dataset DataSet --target num --output models/model.joblib
-```
-
-Or let the loader auto-detect the target:
-
-```bash
-python src/train.py --dataset DataSet --output models/model.joblib
-```
-
-What was implemented
-
-- `src/data.py`: utilities to load CSV files from `DataSet/` and return X, y
-- `src/model.py`: builds a preprocessing + classifier pipeline and trains/evaluates
-- `src/train.py`: CLI wrapper to run training and save model
-- `tests/`: unit tests for the data loader and a small train integration test
-
-Assumptions
-
-- CSVs in `DataSet/` contain a column named `target` by default; you can override with `--target`.
-- This is implemented using scikit-learn and uses a RandomForestClassifier by default.
-
-MLflow & advanced options
-
-- To view MLflow runs (local file-store), start the MLflow UI in the repository root:
-
-```bash
-mlflow ui
-```
-
-Then open http://127.0.0.1:5000 to see runs, parameters, metrics, and artifacts. (By default MLflow stores artifacts and run data in `./mlruns`.)
-
-- To disable MLflow logging set `ENABLE_MLFLOW=0` in the environment. By default logging is enabled.
-- To set a custom experiment name: `export MLFLOW_EXPERIMENT=my_experiment`.
-- To set a remote MLflow server use `export MLFLOW_TRACKING_URI=<uri>`.
-
-Classifier selection
-
-- Use `--classifier` to choose between `rf` (RandomForest), `logreg` (LogisticRegression) or `svm` (SVC). Example:
-
-```bash
-python src/train.py --dataset DataSet --classifier logreg --C 0.5 --output models/model_lr.joblib
-```
-
-The trainer will log ROC AUC and ROC plots to MLflow when available.
-
-```
-# MLOps Assignment — scikit-learn pipeline
-
-This project contains a small scikit-learn based training pipeline that reads CSV files from the `DataSet/` folder, trains a classifier, evaluates it, and saves a trained model to `models/`.
-
-Quick start
-
-1. Install dependencies (preferably inside a virtualenv):
-
-```bash
-pip install -r requirements.txt
-```
-
-2. Put CSV files into the `DataSet/` directory. Each CSV should include a target column. If you don't know the target column name, you can omit `--target` and the loader will attempt to auto-detect it (it looks for a `variables` CSV and common names like `target`, `class`, `label`, `num`).
-
-3. (Optional) You can fetch UCI repository datasets directly using `ucimlrepo` and the included helper script. Example (dataset id 45 — Heart Disease):
-
-```bash
-python src/fetch_ucirepo.py --id 45 --out DataSet
-```
-
-4. Run training (example):
-
-```bash
-python src/train.py --dataset DataSet --target num --output models/model.joblib
-```
-
-Or let the loader auto-detect the target:
-
-```bash
-python src/train.py --dataset DataSet --output models/model.joblib
-```
-
-What was implemented
-
-- `src/data.py`: utilities to load CSV files from `DataSet/` and return X, y
-- `src/model.py`: builds a preprocessing + classifier pipeline and trains/evaluates
-- `src/train.py`: CLI wrapper to run training and save model
-- `tests/`: unit tests for the data loader and a small train integration test
-
-Assumptions
-
-- CSVs in `DataSet/` contain a column named `target` by default; you can override with `--target`.
-- This is implemented using scikit-learn and uses a RandomForestClassifier by default.
+# MLOps Assignment — Top-level overview
+
+This repository is a compact, production-oriented scikit-learn pipeline for tabular classification (example: UCI Heart Disease). It demonstrates a complete ML lifecycle: data ingestion, cleaning, validation, EDA, training, model selection, deployment, batch & online prediction, and observability (MLflow). The design emphasizes reproducibility, simple artefact management, and clear separation between training and inference logic.
+
+Contents (high level)
+- src/
+  - api.py — FastAPI inference server (health, file-predict endpoints)
+  - dataRead.py — load CSVs from DataSet/ and return DataFrame(s)
+  - dataClean.py — cleaning, imputation, simple outlier handling
+  - dataValidation.py — domain checks / schema-like validations
+  - dataEDA.py — EDA helpers and report export
+  - fetch_ucirepo.py — helper to fetch example UCI datasets
+  - modelTrain.py — core training, evaluation and MLflow logging
+  - modelTrainPipeline.py — orchestrates full training pipeline
+  - modelDeploy.py — selects & promotes best model for serving
+  - modelBatchPrediction.py — batch prediction utility (CSV in → predictions out)
+  - predict.py — simple CLI prediction for single files
+- DataSet/ — input CSVs (user-supplied or fetched)
+- models/ — output models & preprocessing artifacts
+- outputs/ — reports, plots, metrics CSVs, exported transformed data
+- mlruns/ (created by MLflow) — experiment runs and artifacts
+
+Top-level workflow (end-to-end)
+1. Data acquisition
+   - Provide CSV files in DataSet/ (each file can be a partition). Optionally use src/fetch_ucirepo.py to fetch examples.
+   - dataRead.py concatenates files and auto-detects common target names if not supplied.
+
+2. Data cleaning & validation
+   - Run dataClean.clean_data to perform median/mode imputations, type coercion, and light outlier handling.
+   - Run dataValidation.validate_* checks to ensure values lie in expected ranges and required columns exist.
+
+3. Exploratory Data Analysis (optional)
+   - dataEDA produces quick plots, distributions, correlation matrices and an optional HTML report written to outputs/eda/.
+
+4. Training & evaluation
+   - modelTrain.py builds a preprocessing + classifier pipeline and evaluates with standard metrics (accuracy, precision, recall, f1, ROC AUC where applicable).
+   - Supported classifiers: RandomForest (default), LogisticRegression, SVC.
+   - Hyperparameter search: GridSearchCV, RandomizedSearchCV, and a manual randomized sampler with optional early stopping.
+   - Cross-validation, model comparison, and export of transformed features are supported.
+
+5. Model selection & deployment
+   - modelDeploy.py contains simple logic to choose the best model (by metrics combination) and persist it as the deployed artifact (e.g., models/deployed_model.joblib).
+   - Preprocessing artifacts (scaler, encoders, feature list) are saved and used at inference to ensure parity.
+
+6. Prediction & serving
+   - Batch: modelBatchPrediction.py reads CSV, applies preprocessing and writes predictions + probabilities (if available).
+   - CLI: predict.py provides a small command-line wrapper for single-file predictions.
+   - API: api.py exposes endpoints for health checks and file-based predictions; designed to load the deployed model artifact.
+
+7. Observability & reproducibility
+   - MLflow is integrated (default local file store: ./mlruns). The trainer logs parameters, metrics, artifacts (cv_results.csv, best_params.json, plots).
+   - Environment flags:
+     - ENABLE_MLFLOW=0 — disable MLflow logging
+     - MLFLOW_EXPERIMENT — experiment name
+     - MLFLOW_TRACKING_URI — custom MLflow tracking server
+
+Quick start (minimal)
+1. Create and activate virtualenv:
+   - python3 -m venv .venv
+   - source .venv/bin/activate
+2. Install:
+   - pip install -r requirements.txt
+3. Add your CSV(s) into DataSet/ (or fetch example):
+   - python src/fetch_ucirepo.py --id 45 --out DataSet
+4. Train:
+   - python src/modelTrainPipeline.py --dataset DataSet --target num --output models/model.joblib
+   (or use modelTrain.py directly)
+5. Deploy best model:
+   - python src/modelDeploy.py --models-dir models --deployed models/deployed_model.joblib
+6. Run batch predictions:
+   - python src/modelBatchPrediction.py --model models/deployed_model.joblib --input DataSet/file.csv --output predictions.csv
+7. Serve API:
+   - uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
+
+Common CLI examples
+- Train with grid search:
+  - python src/modelTrain.py --dataset DataSet --target num --search grid --search-cv 5 --output models/best.joblib
+- Randomized search with progress & patience:
+  - python src/modelTrain.py --dataset DataSet --target num --search random --n-iter 50 --progress --patience 10 --output models/best_random.joblib
+- Predict from CLI:
+  - python src/predict.py --model models/final.joblib --input DataSet/new.csv --output predictions.csv
+
+Artifacts produced
+- models/*.joblib — serialized pipeline (preprocessing + model)
+- models/features.joblib — list of features used at training time
+- models/model_metadata.json — training metadata (params, version, timestamp)
+- models/metrics.json or outputs/metrics_* — evaluation metrics
+- outputs/eda/* — EDA plots and reports
+- mlruns/* — MLflow runs and artifacts (if enabled)
+
+Testing & CI
+- Unit tests: python -m pytest -q
+- A CI workflow (if present) runs tests and basic linting.
+- Recommended: add tests for data validation, preprocessing parity, and an end-to-end inference smoke test.
+
+Deployment notes & best practices
+- Always save & load preprocessing artifacts (feature order, encoders, scalers).
+- Use MLflow to track experiments and to store artifacts centrally when working in a team.
+- For production serving:
+  - Containerize with provided Dockerfile or Dockerfile.prod.
+  - Use the deployed model artifact path known to the API (adjust _find_model_path in src/api.py if needed).
+  - Add input schema validation (e.g., pandera or pydantic) to the API to fail fast on malformed inputs.
+
+Troubleshooting
+- Model not found in API: ensure models/deployed_model.joblib exists or update path in environment/API config.
+- Prediction fails for missing columns: check models/features.joblib and ensure input CSV contains the same feature set (or implement fallback mapping).
+- MLflow runs not visible: verify MLFLOW_TRACKING_URI or set ENABLE_MLFLOW=1.
+
+Contributing & extensions
+- Add stricter schema validation (pandera) and typed contracts for inputs/outputs.
+- Add explainability artifacts (SHAP) and log them to MLflow.
+- Implement model versioning and rollback in modelDeploy.py.
+- Add automated end-to-end tests: training → deploy → inference.
+
+License & contact
+- See LICENSE in repository root for licensing details.
+- See MODEL_CARD.md for intended use, limitations and data disclosure.
+
+This README is intended as a single-pane topview. For implementation details, see docstrings and comments inside each file under src/.
+```// filepath: /media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/README.md
+// ...existing code...
+
+# MLOps Assignment — Top-level overview
+
+This repository is a compact, production-oriented scikit-learn pipeline for tabular classification (example: UCI Heart Disease). It demonstrates a complete ML lifecycle: data ingestion, cleaning, validation, EDA, training, model selection, deployment, batch & online prediction, and observability (MLflow). The design emphasizes reproducibility, simple artefact management, and clear separation between training and inference logic.
+
+Contents (high level)
+- src/
+  - api.py — FastAPI inference server (health, file-predict endpoints)
+  - dataRead.py — load CSVs from DataSet/ and return DataFrame(s)
+  - dataClean.py — cleaning, imputation, simple outlier handling
+  - dataValidation.py — domain checks / schema-like validations
+  - dataEDA.py — EDA helpers and report export
+  - fetch_ucirepo.py — helper to fetch example UCI datasets
+  - modelTrain.py — core training, evaluation and MLflow logging
+  - modelTrainPipeline.py — orchestrates full training pipeline
+  - modelDeploy.py — selects & promotes best model for serving
+  - modelBatchPrediction.py — batch prediction utility (CSV in → predictions out)
+  - predict.py — simple CLI prediction for single files
+- DataSet/ — input CSVs (user-supplied or fetched)
+- models/ — output models & preprocessing artifacts
+- outputs/ — reports, plots, metrics CSVs, exported transformed data
+- mlruns/ (created by MLflow) — experiment runs and artifacts
+
+Top-level workflow (end-to-end)
+1. Data acquisition
+   - Provide CSV files in DataSet/ (each file can be a partition). Optionally use src/fetch_ucirepo.py to fetch examples.
+   - dataRead.py concatenates files and auto-detects common target names if not supplied.
+
+2. Data cleaning & validation
+   - Run dataClean.clean_data to perform median/mode imputations, type coercion, and light outlier handling.
+   - Run dataValidation.validate_* checks to ensure values lie in expected ranges and required columns exist.
+
+3. Exploratory Data Analysis (optional)
+   - dataEDA produces quick plots, distributions, correlation matrices and an optional HTML report written to outputs/eda/.
+
+4. Training & evaluation
+   - modelTrain.py builds a preprocessing + classifier pipeline and evaluates with standard metrics (accuracy, precision, recall, f1, ROC AUC where applicable).
+   - Supported classifiers: RandomForest (default), LogisticRegression, SVC.
+   - Hyperparameter search: GridSearchCV, RandomizedSearchCV, and a manual randomized sampler with optional early stopping.
+   - Cross-validation, model comparison, and export of transformed features are supported.
+
+5. Model selection & deployment
+   - modelDeploy.py contains simple logic to choose the best model (by metrics combination) and persist it as the deployed artifact (e.g., models/deployed_model.joblib).
+   - Preprocessing artifacts (scaler, encoders, feature list) are saved and used at inference to ensure parity.
+
+6. Prediction & serving
+   - Batch: modelBatchPrediction.py reads CSV, applies preprocessing and writes predictions + probabilities (if available).
+   - CLI: predict.py provides a small command-line wrapper for single-file predictions.
+   - API: api.py exposes endpoints for health checks and file-based predictions; designed to load the deployed model artifact.
+
+7. Observability & reproducibility
+   - MLflow is integrated (default local file store: ./mlruns). The trainer logs parameters, metrics, artifacts (cv_results.csv, best_params.json, plots).
+   - Environment flags:
+     - ENABLE_MLFLOW=0 — disable MLflow logging
+     - MLFLOW_EXPERIMENT — experiment name
+     - MLFLOW_TRACKING_URI — custom MLflow tracking server
+
+Quick start (minimal)
+1. Create and activate virtualenv:
+   - python3 -m venv .venv
+   - source .venv/bin/activate
+2. Install:
+   - pip install -r requirements.txt
+3. Add your CSV(s) into DataSet/ (or fetch example):
+   - python src/fetch_ucirepo.py --id 45 --out DataSet
+4. Train:
+   - python src/modelTrainPipeline.py --dataset DataSet --target num --output models/model.joblib
+   (or use modelTrain.py directly)
+5. Deploy best model:
+   - python src/modelDeploy.py --models-dir models --deployed models/deployed_model.joblib
+6. Run batch predictions:
+   - python src/modelBatchPrediction.py --model models/deployed_model.joblib --input DataSet/file.csv --output predictions.csv
+7. Serve API:
+   - uvicorn src.api:app --host 0.0.0.0 --port 8000 --reload
+
+Common CLI examples
+- Train with grid search:
+  - python src/modelTrain.py --dataset DataSet --target num --search grid --search-cv 5 --output models/best.joblib
+- Randomized search with progress & patience:
+  - python src/modelTrain.py --dataset DataSet --target num --search random --n-iter 50 --progress --patience 10 --output models/best_random.joblib
+- Predict from CLI:
+  - python src/predict.py --model models/final.joblib --input DataSet/new.csv --output predictions.csv
+
+Artifacts produced
+- models/*.joblib — serialized pipeline (preprocessing + model)
+- models/features.joblib — list of features used at training time
+- models/model_metadata.json — training metadata (params, version, timestamp)
+- models/metrics.json or outputs/metrics_* — evaluation metrics
+- outputs/eda/* — EDA plots and reports
+- mlruns/* — MLflow runs and artifacts (if enabled)
+
+Testing & CI
+- Unit tests: python -m pytest -q
+- A CI workflow (if present) runs tests and basic linting.
+- Recommended: add tests for data validation, preprocessing parity, and an end-to-end inference smoke test.
+
+Deployment notes & best practices
+- Always save & load preprocessing artifacts (feature order, encoders, scalers).
+- Use MLflow to track experiments and to store artifacts centrally when working in a team.
+- For production serving:
+  - Containerize with provided Dockerfile or Dockerfile.prod.
+  - Use the deployed model artifact path known to the API (adjust _find_model_path in src/api.py if needed).
+  - Add input schema validation (e.g., pandera or pydantic) to the API to fail fast on malformed inputs.
+
+Troubleshooting
+- Model not found in API: ensure models/deployed_model.joblib exists or update path in environment/API config.
+- Prediction fails for missing columns: check models/features.joblib and ensure input CSV contains the same feature set (or implement fallback mapping).
+- MLflow runs not visible: verify MLFLOW_TRACKING_URI or set ENABLE_MLFLOW=1.
+
+Contributing & extensions
+- Add stricter schema validation (pandera) and typed contracts for inputs/outputs.
+- Add explainability artifacts (SHAP) and log them to MLflow.
+- Implement model versioning and rollback in modelDeploy.py.
+- Add automated end-to-end tests: training → deploy → inference.
+
+License & contact
+- See LICENSE in repository root for licensing details.
+- See MODEL_CARD.md for intended use, limitations and data disclosure.
+
+This README is intended as a single-pane topview. For implementation details, see docstrings and comments inside each file under src/.
