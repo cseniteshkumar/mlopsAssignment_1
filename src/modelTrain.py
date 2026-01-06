@@ -155,7 +155,7 @@ def modelTrain(data, model_path=None, generate_html=True):
     }
 
     # Start a Parent Run to group all model attempts together
-    with mlflow.start_run(run_name="Algorithm_Comparison_Suite"):
+    with mlflow.start_run(run_name="Model_Training_Comparison_Suite", nested=True):
         results = {}
         saved_artifacts = {}
         

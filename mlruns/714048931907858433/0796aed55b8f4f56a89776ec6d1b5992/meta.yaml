@@ -1,0 +1,14 @@
+artifact_uri: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/0796aed55b8f4f56a89776ec6d1b5992/artifacts
+end_time: 1767686461013
+entry_point_name: ''
+experiment_id: '714048931907858433'
+lifecycle_stage: active
+run_id: 0796aed55b8f4f56a89776ec6d1b5992
+run_name: KNN
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1767686457900
+status: 3
+tags: []
+user_id: niteshkumar

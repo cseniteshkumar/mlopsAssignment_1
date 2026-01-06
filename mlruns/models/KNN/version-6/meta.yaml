@@ -1,0 +1,15 @@
+creation_timestamp: 1767686460991
+current_stage: None
+deployment_job_state: null
+description: null
+last_updated_timestamp: 1767686460991
+model_id: m-95458d7dae654bc0b4d2284a72d5a038
+name: KNN
+run_id: 0796aed55b8f4f56a89776ec6d1b5992
+run_link: null
+source: models:/m-95458d7dae654bc0b4d2284a72d5a038
+status: READY
+status_message: null
+storage_location: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/models/m-95458d7dae654bc0b4d2284a72d5a038/artifacts
+user_id: null
+version: 6

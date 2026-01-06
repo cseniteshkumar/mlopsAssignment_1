@@ -1,0 +1,14 @@
+artifact_uri: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/cc7aa2e53bec45ad9773f95256dbd849/artifacts
+end_time: 1767686464229
+entry_point_name: ''
+experiment_id: '714048931907858433'
+lifecycle_stage: active
+run_id: cc7aa2e53bec45ad9773f95256dbd849
+run_name: Gradient_Boosting
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1767686461014
+status: 3
+tags: []
+user_id: niteshkumar

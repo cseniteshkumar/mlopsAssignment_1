@@ -1,0 +1,15 @@
+creation_timestamp: 1767686464202
+current_stage: None
+deployment_job_state: null
+description: null
+last_updated_timestamp: 1767686464202
+model_id: m-4ca67bdb9d044a6ea94c087b35a6716c
+name: Gradient_Boosting
+run_id: cc7aa2e53bec45ad9773f95256dbd849
+run_link: null
+source: models:/m-4ca67bdb9d044a6ea94c087b35a6716c
+status: READY
+status_message: null
+storage_location: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/models/m-4ca67bdb9d044a6ea94c087b35a6716c/artifacts
+user_id: null
+version: 6

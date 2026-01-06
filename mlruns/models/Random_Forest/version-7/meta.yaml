@@ -1,0 +1,15 @@
+creation_timestamp: 1767688330332
+current_stage: None
+deployment_job_state: null
+description: null
+last_updated_timestamp: 1767688330332
+model_id: m-20b44ddfb6084534b45c614f05abc79c
+name: Random_Forest
+run_id: ce8101936a244e65a59cae0e67f4ae48
+run_link: null
+source: models:/m-20b44ddfb6084534b45c614f05abc79c
+status: READY
+status_message: null
+storage_location: file:///media/niteshkumar/SSD_Store_0_nvme/allPythoncodesWithPipEnv/BitsLearning/MLOps_Assignment/Assignment_1/mlruns/714048931907858433/models/m-20b44ddfb6084534b45c614f05abc79c/artifacts
+user_id: null
+version: 7
